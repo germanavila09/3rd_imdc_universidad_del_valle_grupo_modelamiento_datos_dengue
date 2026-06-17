@@ -17,7 +17,7 @@ A continuación se detallan los integrantes del equipo y sus afiliaciones:
 | **German Avila Rodriguez** | **Líder de Equipo** <br>*(F. Nacimiento: 29 Sept 1989)* | Geógrafo, Magíster en Ciencia de Datos. <br>Estudiante de Doctorado en Ingeniería. | Universidad Pontificia Javeriana (MSc) <br>Universidad del Valle (PhD Student) |
 | **Ignacio Alberto Concha-Eastman** | **Colaborador** <br>*(F. Nacimiento: 31 Mayo 1945)* | Médico (MD), Magíster en Epidemiología (MSc). <br>Ex-Asesor Regional de la OPS/OMS (WDC). <br>Ex-Secretario de Salud de Cali. | Investigador Independiente (Retirado) |
 | **Ingrid Liliana Minotta** | **Colaboradora** <br>*(F. Nacimiento: 03 Feb 1986)* | Enfermera Registrada. <br>Magíster en Epidemiología y Economía. | Pontificia Universidad Javeriana Cali |
-| **Carlos Alberto Reina Bolaños** | **Colaborador** <br>*(F. Nacimiento: 28 Mayo 1990)* | Terapeuta Ocupacional. <br>Magíster en Salud Pública y Epidemiología. <br>Estudiante de Doctorado (PhD). | Universidad de Antioquia |
+| **Carlos Alberto Reina Bolaños** | **Colaborador** <br>*(F. Nacimiento: 28 Mayo 1990)* | Terapeuta Ocupacional. <br>Magíster en Salud Pública. <br>Doctor (PhD) en Epidemiología. | Universidad de Antioquia |
 | **Pablo Roa-Urrutia** | **Colaborador** <br>*(F. Nacimiento: 03 Feb 1991)* | Terapeuta Ocupacional. <br>Magíster en Epidemiología. | Universidad Santiago de Cali |
 
 ---
