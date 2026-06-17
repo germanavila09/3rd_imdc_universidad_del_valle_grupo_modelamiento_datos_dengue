@@ -2,7 +2,11 @@
   <img src="img/home_imdc.svg" alt="Sprint Planning" width="800" height="200">
 </p>
 
-# 3rd InfoDengue / Mosqlimate Data Challenge (IMDC 2026) - [Nombre de tu Equipo / Team Name]
+# 3rd InfoDengue / Mosqlimate Data Challenge (IMDC 2026) - Grupo de Modelamiento de Datos en Dengue
+
+* **Nombre del Equipo**: Grupo de Modelamiento de Datos en Dengue
+* **Institución Principal**: Universidad del Valle
+* **País**: Colombia
 
 Este repositorio contiene el desarrollo del modelo predictivo presentado por nuestro equipo para el **3rd IMDC 2026**. El objetivo es pronosticar casos probables de Dengue utilizando modelos avanzados de ciencia de datos y epidemiología, respetando las restricciones de tiempo y uso de datos del desafío.
 
