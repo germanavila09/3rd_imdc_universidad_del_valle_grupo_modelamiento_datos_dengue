@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Dengue IMDC 2026 — Análisis Geoespacial</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2a3341;
+  --txt:#e6edf3; --muted:#8b949e; --accent:#f97316; --accent2:#38bdf8;
+  --green:#3fb950; --red:#f85149; --yellow:#e3b341;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+.wrap{max-width:1400px;margin:0 auto;padding:20px}
+header.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;border-bottom:2px solid var(--accent);padding-bottom:14px;margin-bottom:18px}
+header.top h1{font-size:22px;font-weight:700}
+header.top .sub{color:var(--muted);font-size:13px;margin-top:4px}
+.badge{background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--accent2)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px}
+.kpi .v{font-size:24px;font-weight:700}
+.kpi .l{color:var(--muted);font-size:12px;margin-top:3px}
+.kpi .s{font-size:11px;color:var(--accent2);margin-top:4px}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.card h2{font-size:15px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card .desc{color:var(--muted);font-size:12px;margin-bottom:12px}
+#map,#citymap{height:440px;border-radius:8px;border:1px solid var(--border)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+select,button{background:var(--panel2);color:var(--txt);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;cursor:pointer}
+button.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:600}
+.legend{line-height:18px;color:var(--txt);font-size:12px;background:rgba(22,27,34,.9);padding:8px 10px;border-radius:6px;border:1px solid var(--border)}
+.legend i{width:16px;height:16px;float:left;margin-right:6px;opacity:.85;border-radius:2px}
+.chartbox{position:relative;height:300px}
+.chartbox.tall{height:340px}
+.full{grid-column:1/-1}
+.tag{display:inline-block;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--muted);margin-right:6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.foot{color:var(--muted);font-size:12px;text-align:center;margin-top:20px;padding-top:14px;border-top:1px solid var(--border)}
+.pred-note{background:linear-gradient(90deg,rgba(249,115,22,.12),transparent);border:1px dashed var(--accent);border-radius:8px;padding:12px;font-size:13px;color:var(--txt)}
+.leaflet-popup-content-wrapper{background:var(--panel2);color:var(--txt)}
+.leaflet-popup-tip{background:var(--panel2)}
+a{color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div>
+    <h1>🦟 Dashboard Dengue — IMDC 2026</h1>
+    <div class="sub">Grupo de Modelamiento de Datos en Dengue · Universidad del Valle · Análisis descriptivo geoespacial (EW01 2010 – EW10 2026)</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <span class="badge">Reto obligatorio · Dengue UF</span>
+    <span class="badge">Opcional 1 · 15 ciudades</span>
+  </div>
+</header>
+
+<div class="kpis" id="kpis"></div>
+
+<!-- MODULE 1: MAP + TIME SERIES -->
+<div class="grid">
+  <div class="card">
+    <h2>🗺️ Módulo 1 · Incidencia geoespacial por estado (UF)</h2>
+    <div class="desc">Coroplético de incidencia (casos por 100.000 hab.). Elige el año y haz clic en un estado para ver su serie temporal.</div>
+    <div class="controls">
+      <label style="color:var(--muted);font-size:12px">Año:</label>
+      <select id="yearSel"></select>
+      <button id="cumBtn">Acumulado 2010–2026</button>
+    </div>
+    <div id="map"></div>
+  </div>
+  <div class="card">
+    <h2>📈 Módulo 2 · Serie temporal semanal</h2>
+    <div class="desc" id="tsDesc">Casos semanales de dengue. Selecciona un estado en el mapa.</div>
+    <div class="controls">
+      <select id="stateSel"></select>
+      <button id="logBtn">Escala log</button>
+    </div>
+    <div class="chartbox tall"><canvas id="tsChart"></canvas></div>
+  </div>
+</div>
+
+<!-- MODULE 3: CITIES -->
+<div class="grid">
+  <div class="card">
+    <h2>🏙️ Módulo 3 · 15 ciudades objetivo (Reto opcional 1)</h2>
+    <div class="desc">Ubicación y magnitud (círculo ∝ casos acumulados). Clic en un marcador para su serie.</div>
+    <div id="citymap"></div>
+  </div>
+  <div class="card">
+    <h2>📊 Serie de la ciudad</h2>
+    <div class="desc" id="cityDesc">Selecciona una ciudad en el mapa.</div>
+    <div class="controls"><select id="citySel"></select></div>
+    <div class="chartbox tall"><canvas id="cityChart"></canvas></div>
+  </div>
+</div>
+
+<!-- MODULE 4: CLIMATE / OSCILLATIONS -->
+<div class="grid">
+  <div class="card">
+    <h2>🌡️ Módulo 4 · Clima nacional vs. casos</h2>
+    <div class="desc">Media nacional semanal de temperatura, precipitación y humedad frente a la curva epidémica (posibles covariables del modelo).</div>
+    <div class="chartbox"><canvas id="climChart"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>🌊 Oscilaciones oceánicas (ENSO / IOD / PDO)</h2>
+    <div class="desc">Índices climáticos de gran escala superpuestos a los casos nacionales — candidatos a variables exógenas (ARIMAX / ML).</div>
+    <div class="chartbox"><canvas id="oscChart"></canvas></div>
+  </div>
+</div>
+
+<!-- MODULE 5: RANKING TABLE -->
+<div class="card full" style="margin-bottom:18px">
+  <h2>🏆 Módulo 5 · Ranking de estados</h2>
+  <div class="desc">Ordenado por incidencia acumulada por 100.000 habitantes.</div>
+  <div style="max-height:340px;overflow:auto"><table id="rankTable"></table></div>
+</div>
+
+<!-- MODULE 6: PREDICTIVE -->
+<div class="card full">
+  <h2>🔮 Módulo 6 · Comparativa de modelos vs. observado</h2>
+  <div class="desc">Medianas de los cuatro modelos —<b style="color:#f97316">Ensamble</b>, <b style="color:#a371f7">AutoARIMA</b>, <b style="color:#3fb950">XGBoost</b> y <b style="color:#e3b341">climatológico</b>— frente a los casos <b style="color:#38bdf8">observados</b>, por unidad y test. Elige de <b>qué modelo</b> y a <b>qué nivel de intervalo</b> (50/80/90/95%) mostrar la banda de incertidumbre, y ordena el ranking por WIS o MAE (inspirado en el dashboard oficial de Mosqlimate).</div>
+  <div class="controls">
+    <button id="lvlUF" class="active">Estados (UF)</button>
+    <button id="lvlCity">Ciudades</button>
+    <select id="predUnit"></select>
+    <select id="predTest">
+      <option value="validation_1">Validación 1 · 2022–23</option>
+      <option value="validation_2">Validación 2 · 2023–24</option>
+      <option value="validation_3" selected>Validación 3 · 2024–25</option>
+      <option value="validation_4">Validación 4 · 2025–26</option>
+    </select>
+    <span style="color:var(--muted);font-size:12px;margin-left:6px">Banda:</span>
+    <select id="bandModel">
+      <option value="ens" selected>Ensamble</option>
+      <option value="arima">AutoARIMA</option>
+      <option value="xgb">XGBoost</option>
+      <option value="clim">Climatológico</option>
+      <option value="none">Ninguna</option>
+    </select>
+    <span style="color:var(--muted);font-size:12px">IC:</span>
+    <select id="bandLevel">
+      <option value="50">50%</option>
+      <option value="80">80%</option>
+      <option value="90">90%</option>
+      <option value="95" selected>95%</option>
+    </select>
+    <select id="metricSel">
+      <option value="wis" selected>Ordenar por WIS</option>
+      <option value="mae">Ordenar por MAE</option>
+    </select>
+  </div>
+  <div class="chartbox tall"><canvas id="predChart"></canvas></div>
+  <div id="wisCards" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px"></div>
+  <div class="pred-note" style="margin-top:12px">
+    <b>WIS medio global (validación, menor es mejor):</b> AutoARIMA 3191 · Climatológico 1368 · XGBoost 1462 · <b>Ensamble con tope 1214</b> (UF) / 114 (ciudades). El ensamble combina la precisión de XGBoost/climatológico con los intervalos calibrados del AutoARIMA (IC50≈59%, IC95≈94%) y un tope por unidad (3× máx. histórico) que evita colas irreales. <span class="tag">src/train_imdc.py</span><span class="tag">src/train_xgb.py</span><span class="tag">scripts/build_final_ensemble.py</span>
+  </div>
+</div>
+
+<div class="foot">
+  Fuente: InfoDengue / Mosqlimate FTP · Datos: dengue, población DATASUS, clima, oscilaciones oceánicas, shapes IBGE (EPSG:4674).<br>
+  Dashboard descriptivo generado antes de la fase de modelado · IMDC 2026.
+</div>
+</div>
+
+<script src="bundle.js"></script>
+<script>
+const D=window.DASH;
+const fmt=n=>n.toLocaleString('es-CO');
+const UFNAME={AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins',ES:'Espírito Santo'};
+
+// ---------- KPIs ----------
+const totCases=D.weekly._NATIONAL.casos.reduce((a,b)=>a+b,0);
+const byYear={};
+D.uf_year.forEach(r=>byYear[r.year]=(byYear[r.year]||0)+r.casos);
+const peakYear=Object.entries(byYear).sort((a,b)=>b[1]-a[1])[0];
+const topState=[...D.uf_total].sort((a,b)=>b.incidence-a.incidence)[0];
+const topAbs=[...D.uf_total].sort((a,b)=>b.casos-a.casos)[0];
+document.getElementById('kpis').innerHTML=[
+  ['Casos totales de dengue','2010–2026',fmt(totCases),''],
+  ['Año epidémico pico',peakYear[0],fmt(peakYear[1])+' casos',''],
+  ['Mayor incidencia acumulada',UFNAME[topState.uf],topState.incidence.toLocaleString('es-CO')+' /100k',topState.uf],
+  ['Más casos absolutos',UFNAME[topAbs.uf],fmt(topAbs.casos),topAbs.uf],
+  ['Estados cubiertos','Reto obligatorio','26 + DF','excl. Espírito Santo'],
+].map(k=>`<div class="kpi"><div class="v">${k[2]}</div><div class="l">${k[0]}</div><div class="s">${k[1]}${k[3]?' · '+k[3]:''}</div></div>`).join('');
+
+// ---------- MODULE 1: MAP ----------
+const years=[...new Set(D.uf_year.map(r=>r.year))].sort();
+const ySel=document.getElementById('yearSel');
+years.forEach(y=>ySel.innerHTML+=`<option value="${y}" ${y==2024?'selected':''}>${y}</option>`);
+let mode={cum:false,year:2024};
+
+const map=L.map('map',{zoomControl:true}).setView([-15,-54],4);
+L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap © CARTO',subdomains:'abcd'}).addTo(map);
+
+function incidenceFor(uf){
+  if(mode.cum){const r=D.uf_total.find(x=>x.uf===uf);return r?r.incidence:0;}
+  const r=D.uf_year.find(x=>x.uf===uf&&x.year==mode.year);return r?r.incidence:0;
+}
+function colScale(v,max){
+  const grades=[0,.05,.1,.2,.35,.55,.8];const t=v/max;
+  const cols=['#0d3b66','#1d6a96','#3fa7d6','#7ec8a9','#e3b341','#f97316','#f85149'];
+  for(let i=grades.length-1;i>=0;i--) if(t>=grades[i]) return cols[i];
+  return cols[0];
+}
+let geoLayer,legend,curMax=1;
+function styleFn(f){
+  const uf=f.properties.uf;const v=incidenceFor(uf);
+  return {fillColor:colScale(v,curMax),weight:1,color:'#0d1117',fillOpacity:.82};
+}
+function drawMap(){
+  const vals=D.ufgeo.features.map(f=>incidenceFor(f.properties.uf));
+  curMax=Math.max(...vals)||1;
+  if(geoLayer) geoLayer.remove();
+  geoLayer=L.geoJSON(D.ufgeo,{style:styleFn,onEachFeature:(f,l)=>{
+    const uf=f.properties.uf;const v=incidenceFor(uf);
+    l.bindTooltip(`<b>${UFNAME[uf]||uf}</b><br>${v.toLocaleString('es-CO')} /100k hab`,{sticky:true});
+    l.on('click',()=>{document.getElementById('stateSel').value=uf;drawTS(uf);});
+    l.on('mouseover',()=>l.setStyle({weight:2.5,color:'#fff'}));
+    l.on('mouseout',()=>geoLayer.resetStyle(l));
+  }}).addTo(map);
+  buildLegend();
+}
+function buildLegend(){
+  if(legend) legend.remove();
+  legend=L.control({position:'bottomright'});
+  legend.onAdd=()=>{
+    const div=L.DomUtil.create('div','legend');
+    const cols=['#0d3b66','#1d6a96','#3fa7d6','#7ec8a9','#e3b341','#f97316','#f85149'];
+    const grades=[0,.05,.1,.2,.35,.55,.8].map(g=>Math.round(g*curMax));
+    div.innerHTML='<b>Incidencia /100k</b><br>';
+    for(let i=0;i<cols.length;i++) div.innerHTML+=`<i style="background:${cols[i]}"></i>${grades[i].toLocaleString('es-CO')}${grades[i+1]?'–'+grades[i+1].toLocaleString('es-CO'):'+'}<br>`;
+    return div;
+  };
+  legend.addTo(map);
+}
+ySel.onchange=e=>{mode.cum=false;mode.year=+e.target.value;document.getElementById('cumBtn').classList.remove('active');drawMap();};
+document.getElementById('cumBtn').onclick=e=>{mode.cum=true;e.target.classList.add('active');drawMap();};
+drawMap();
+
+// ---------- MODULE 2: TIME SERIES ----------
+const stSel=document.getElementById('stateSel');
+stSel.innerHTML='<option value="_NATIONAL">🇧🇷 Nacional</option>'+
+  Object.keys(UFNAME).filter(u=>u!=='ES').sort().map(u=>`<option value="${u}">${UFNAME[u]} (${u})</option>`).join('');
+let tsChart,logScale=false;
+function drawTS(uf){
+  stSel.value=uf;
+  const d=D.weekly[uf];if(!d)return;
+  document.getElementById('tsDesc').textContent=(uf==='_NATIONAL'?'Nacional':UFNAME[uf])+' · '+fmt(d.casos.reduce((a,b)=>a+b,0))+' casos acumulados';
+  const ctx=document.getElementById('tsChart');
+  if(tsChart)tsChart.destroy();
+  tsChart=new Chart(ctx,{type:'line',data:{labels:d.dates,datasets:[{label:'Casos/semana',data:d.casos,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.15)',fill:true,pointRadius:0,borderWidth:1.5,tension:.2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:10},grid:{color:'#1c2330'}},
+              y:{type:logScale?'logarithmic':'linear',ticks:{color:'#8b949e'},grid:{color:'#1c2330'}}}}});
+}
+stSel.onchange=e=>drawTS(e.target.value);
+document.getElementById('logBtn').onclick=e=>{logScale=!logScale;e.target.classList.toggle('active');drawTS(stSel.value);};
+drawTS('_NATIONAL');
+
+// ---------- MODULE 3: CITIES ----------
+const cmap=L.map('citymap').setView([-14,-52],4);
+L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png',{subdomains:'abcd'}).addTo(cmap);
+const cityTotals=Object.entries(D.cities).map(([g,c])=>c.total);
+const maxCity=Math.max(...cityTotals);
+const cSel=document.getElementById('citySel');
+D.city_points.forEach(p=>{
+  const c=D.cities[p.geocode];if(!c)return;
+  const r=6+22*Math.sqrt(c.total/maxCity);
+  L.circleMarker([p.lat,p.lon],{radius:r,fillColor:'#f97316',color:'#fff',weight:1,fillOpacity:.65})
+    .addTo(cmap).bindTooltip(`<b>${c.name}</b><br>${fmt(c.total)} casos`,{})
+    .on('click',()=>{cSel.value=p.geocode;drawCity(p.geocode);});
+});
+Object.entries(D.cities).sort((a,b)=>b[1].total-a[1].total).forEach(([g,c])=>cSel.innerHTML+=`<option value="${g}">${c.name}</option>`);
+let cityChart;
+function drawCity(g){
+  const c=D.cities[g];if(!c)return;
+  document.getElementById('cityDesc').textContent=c.name+' · '+fmt(c.total)+' casos acumulados';
+  if(cityChart)cityChart.destroy();
+  cityChart=new Chart(document.getElementById('cityChart'),{type:'line',data:{labels:c.dates,datasets:[{data:c.casos,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.15)',fill:true,pointRadius:0,borderWidth:1.5,tension:.2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:9},grid:{color:'#1c2330'}},y:{ticks:{color:'#8b949e'},grid:{color:'#1c2330'}}}}});
+}
+cSel.onchange=e=>drawCity(e.target.value);
+drawCity(cSel.value);
+
+// ---------- MODULE 4: CLIMATE ----------
+function alignNat(dates){
+  const map={};D.weekly._NATIONAL.dates.forEach((d,i)=>map[d]=D.weekly._NATIONAL.casos[i]);
+  return dates.map(d=>map[d]??null);
+}
+new Chart(document.getElementById('climChart'),{data:{labels:D.clim.dates,datasets:[
+  {type:'line',label:'Temp. media (°C)',data:D.clim.temp,borderColor:'#f85149',yAxisID:'y1',pointRadius:0,borderWidth:1.2},
+  {type:'line',label:'Humedad (%)',data:D.clim.humid,borderColor:'#3fb950',yAxisID:'y1',pointRadius:0,borderWidth:1,hidden:true},
+  {type:'line',label:'Casos nac.',data:alignNat(D.clim.dates),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.12)',fill:true,yAxisID:'y2',pointRadius:0,borderWidth:1.3}
+]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{labels:{color:'#e6edf3',boxWidth:12}}},
+  scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:9},grid:{color:'#1c2330'}},
+    y1:{position:'left',ticks:{color:'#8b949e'},grid:{color:'#1c2330'}},
+    y2:{position:'right',ticks:{color:'#8b949e'},grid:{drawOnChartArea:false}}}}});
+
+// ---------- MODULE 4b: OSCILLATIONS ----------
+new Chart(document.getElementById('oscChart'),{data:{labels:D.osc.dates,datasets:[
+  {type:'line',label:'ENSO',data:D.osc.enso,borderColor:'#38bdf8',yAxisID:'y1',pointRadius:0,borderWidth:1.2},
+  {type:'line',label:'IOD',data:D.osc.iod,borderColor:'#e3b341',yAxisID:'y1',pointRadius:0,borderWidth:1,hidden:true},
+  {type:'line',label:'PDO',data:D.osc.pdo,borderColor:'#a371f7',yAxisID:'y1',pointRadius:0,borderWidth:1,hidden:true},
+  {type:'line',label:'Casos nac.',data:alignNat(D.osc.dates),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.12)',fill:true,yAxisID:'y2',pointRadius:0,borderWidth:1.3}
+]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{labels:{color:'#e6edf3',boxWidth:12}}},
+  scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:9},grid:{color:'#1c2330'}},
+    y1:{position:'left',ticks:{color:'#8b949e'},grid:{color:'#1c2330'}},
+    y2:{position:'right',ticks:{color:'#8b949e'},grid:{drawOnChartArea:false}}}}});
+
+// ---------- MODULE 5: RANKING ----------
+const rows=[...D.uf_total].filter(r=>r.uf!=='ES').sort((a,b)=>b.incidence-a.incidence);
+let html='<thead><tr><th>#</th><th>Estado</th><th>UF</th><th class="num">Casos</th><th class="num">Población</th><th class="num">Incidencia /100k</th></tr></thead><tbody>';
+rows.forEach((r,i)=>{html+=`<tr><td>${i+1}</td><td>${UFNAME[r.uf]}</td><td><span class="pill" style="background:${colScale(r.incidence,rows[0].incidence)}">${r.uf}</span></td><td class="num">${fmt(r.casos)}</td><td class="num">${fmt(r.population)}</td><td class="num">${r.incidence.toLocaleString('es-CO')}</td></tr>`;});
+document.getElementById('rankTable').innerHTML=html+'</tbody>';
+
+// ---------- MODULE 6: MODEL COMPARISON vs OBSERVED ----------
+const P=D.compare; let predLevel='uf', predChart;
+const pUnit=document.getElementById('predUnit'), pTest=document.getElementById('predTest');
+const bandModel=document.getElementById('bandModel'), bandLevel=document.getElementById('bandLevel'), metricSel=document.getElementById('metricSel');
+const MODELS=[
+  {k:'ens',  label:'Ensamble',      color:'#f97316', w:2.6},
+  {k:'arima',label:'AutoARIMA',     color:'#a371f7', w:1.4},
+  {k:'xgb',  label:'XGBoost',       color:'#3fb950', w:1.4},
+  {k:'clim', label:'Climatológico', color:'#e3b341', w:1.4},
+];
+const MC={ens:'#f97316',arima:'#a371f7',xgb:'#3fb950',clim:'#e3b341'};
+function hex2rgba(h,a){const n=parseInt(h.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+function fillUnits(){
+  if(predLevel==='uf'){
+    pUnit.innerHTML=Object.keys(P.uf).sort().map(u=>`<option value="${u}">${UFNAME[u]||u} (${u})</option>`).join('');
+    pUnit.value='SP';
+  }else{
+    pUnit.innerHTML=Object.keys(P.cities).map(g=>{const c=D.cities[g];return `<option value="${g}">${c?c.name:g}</option>`;}).join('');
+  }
+}
+function drawPred(){
+  const set=predLevel==='uf'?P.uf:P.cities;
+  const o=set[pUnit.value] && set[pUnit.value][pTest.value];
+  if(!o)return;
+  const name=predLevel==='uf'?(UFNAME[pUnit.value]||pUnit.value):(D.cities[pUnit.value]?D.cities[pUnit.value].name:pUnit.value);
+  if(predChart)predChart.destroy();
+  const band=(lo,hi,c)=>[{data:hi,borderWidth:0,pointRadius:0,fill:'+1',backgroundColor:c},{data:lo,borderWidth:0,pointRadius:0,fill:false}];
+  const ds=[];
+  // banda del modelo seleccionado al nivel de intervalo elegido
+  const bm=bandModel.value, lv=bandLevel.value;
+  if(bm!=='none' && o.m[bm]){
+    const md=o.m[bm]; ds.push(...band(md['l'+lv],md['u'+lv],hex2rgba(MC[bm],.16)));
+  }
+  MODELS.forEach(m=>ds.push({label:m.label,data:o.m[m.k].pred,borderColor:m.color,pointRadius:0,borderWidth:m.w,tension:.2,spanGaps:true,borderDash:m.k==='clim'?[4,3]:[]}));
+  ds.push({label:'Observado',data:o.obs,borderColor:'#38bdf8',pointRadius:0,borderWidth:2,tension:.2,spanGaps:true});
+  const bmLabel=bm==='none'?'sin banda':`banda ${MODELS.find(x=>x.k===bm).label} IC${lv}%`;
+  predChart=new Chart(document.getElementById('predChart'),{type:'line',data:{labels:o.dates,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:'#e6edf3',filter:it=>it.text&&it.text.length>3,boxWidth:12}},
+      title:{display:true,text:`Comparativa EW41→EW40 — ${name}  ·  ${bmLabel}`,color:'#8b949e'}},
+    scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:12},grid:{color:'#1c2330'}},y:{ticks:{color:'#8b949e'},grid:{color:'#1c2330'},beginAtZero:true}}}});
+  // tarjetas-ranking por métrica seleccionada
+  const met=metricSel.value; // 'wis' | 'mae'
+  const vals=MODELS.map(m=>({m,v:o[met][m.k]})).filter(x=>x.v!=null).sort((a,b)=>a.v-b.v);
+  const best=vals.length?vals[0].v:null;
+  document.getElementById('wisCards').innerHTML=MODELS.map(m=>{
+    const w=o.wis[m.k], ma=o.mae[m.k]; const rank=vals.findIndex(x=>x.m.k===m.k);
+    const isBest=(met==='wis'?w:ma)===best;
+    return `<div style="flex:1;min-width:150px;background:var(--panel2);border:1px solid ${isBest?m.color:'var(--border)'};border-left:3px solid ${m.color};border-radius:8px;padding:8px 12px">
+      <div style="font-size:12px;color:var(--muted)">${rank>=0?'#'+(rank+1)+' ':''}${m.label}${isBest?' ⭐':''}</div>
+      <div style="font-size:17px;font-weight:700;color:${m.color}">WIS ${w==null?'—':Math.round(w).toLocaleString('es-CO')}</div>
+      <div style="font-size:12px;color:var(--muted)">MAE ${ma==null?'—':Math.round(ma).toLocaleString('es-CO')}</div></div>`;
+  }).join('');
+}
+document.getElementById('lvlUF').onclick=e=>{predLevel='uf';e.target.classList.add('active');document.getElementById('lvlCity').classList.remove('active');fillUnits();drawPred();};
+document.getElementById('lvlCity').onclick=e=>{predLevel='cities';e.target.classList.add('active');document.getElementById('lvlUF').classList.remove('active');fillUnits();drawPred();};
+[pUnit,pTest,bandModel,bandLevel,metricSel].forEach(el=>el.onchange=drawPred);
+fillUnits(); drawPred();
+</script>
+</body>
+</html>

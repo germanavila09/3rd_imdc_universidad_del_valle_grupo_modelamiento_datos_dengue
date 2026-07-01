@@ -205,3 +205,30 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ============================================================
+# IMDC 2026 — específico del proyecto
+# ============================================================
+# Datos del reto (provistos por el FTP de Mosqlimate — NO versionar, ~806 MB)
+data/
+dengue_ia_valle/data/
+scratch/
+
+# Artefactos intermedios y de scratch (regenerables)
+outputs/predictions/parts/
+outputs/predictions/xgb_features.parquet
+outputs/dash_data/
+*.parquet
+
+# Credenciales
+.env
+
+# Temporales de verificación
+_pg*.jpg
+dashboard/_check.js
+
+# Nota: SÍ se versionan:
+#   src/**, scripts/**, dashboard/{index.html,bundle.js},
+#   outputs/predictions/FINAL_*.csv y dengue_*_validation*.csv,
+#   outputs/predictions/uf_climate_climatology.csv,
+#   outputs/report_img/**, Informe_Tecnico_IMDC2026.docx, README.md
